@@ -56,18 +56,7 @@
 - Panel visual (`PanelPlan`) pinta barras por PID para ver el historial de ejecución.
 
 ---
-## Diapositiva 8 · ¿Qué hace `KernelUI`?
-- Construye la ventana `JFrame`, aplica tema de colores y añade tres zonas: barra superior, pestañas centrales y panel de log.
-- Barra superior (`buildTopPanel`): botones para ciclo de CPU, auto‑ejecución con `Timer`, reinicio completo, y control del `quantum`/intervalo.
-- Pestañas (`buildTabs`):
-  - **Procesos**: formulario de creación, tabla vinculada a `DefaultTableModel`, acciones de E/S y terminación con sincronización de selects.
-  - **Memoria**: barra de uso y área textual que recorre `BloqueMemoria` desde el simulador.
-  - **Archivos y E/S**: formulario de archivos, apertura/cierre por PID y listado de cola `SolicitudES`.
-- Actualización (`refreshUI` y helpers) repuebla tablas, combos y textos tras cada acción para reflejar el estado de `SimuladorKernel`.
-- Registro (`log`): prefija hora y agrega líneas al panel inferior desplazando el cursor al final para mantener visible el último evento.
 
----
-## Diapositiva 9 · Flujo de uso sugerido
 1. Ajustar quantum si se desea.
 2. Crear uno o más procesos con ráfaga y memoria requerida.
 3. Ejecutar `tick` manual o activar auto-`tick` para observar Round Robin.
@@ -76,7 +65,7 @@
 6. Terminar procesos o reiniciar para repetir la simulación.
 
 ---
-## Diapositiva 10 · Ideas de extensión
+
 - Añadir prioridad y envejecimiento al planificador.
 - Exponer fallos de asignación de memoria con compactación opcional.
 - Simular buffers de disco o tiempos de servicio variables en E/S.
