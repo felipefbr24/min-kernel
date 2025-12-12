@@ -1,5 +1,5 @@
 package archivos;
 
 public enum EstadoCierre {
-    SUCCESS, NOT_FOUND, NO_OPEN, NOT_OWNER
+    EXITO, NO_ENCONTRADO, SIN_APERTURA, NO_PROPIETARIO
 }

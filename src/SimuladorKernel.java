@@ -10,140 +10,140 @@ import java.util.List;
 import java.util.Optional;
 
 public class SimuladorKernel {
-    private final GestorProcesos processManager = new GestorProcesos();
-    private final GestorMemoria memoryManager = new GestorMemoria(256);
-    private final SistemaArchivosSim fileSystem = new SistemaArchivosSim();
-    private final GestorES ioManager = new GestorES();
+    private final GestorProcesos gestorProcesos = new GestorProcesos();
+    private final GestorMemoria gestorMemoria = new GestorMemoria(256);
+    private final SistemaArchivosSim sistemaArchivos = new SistemaArchivosSim();
+    private final GestorES gestorES = new GestorES();
 
-    public String createProcess(String name, int burstTime, int memory) {
-        if (name.isEmpty()) {
-            name = "Proceso " + (processManager.size() + 1);
+    public String crearProceso(String nombre, int rafaga, int memoria) {
+        if (nombre.isEmpty()) {
+            nombre = "Proceso " + (gestorProcesos.tamano() + 1);
         }
-        BloqueControlProceso pcb = processManager.createProcess(name, burstTime, memory);
-        boolean allocated = memoryManager.allocate(pcb.pid, memory);
-        if (!allocated) {
-            processManager.removeProcess(pcb.pid);
-            return "No hay memoria suficiente para " + name;
+        BloqueControlProceso pcb = gestorProcesos.crearProceso(nombre, rafaga, memoria);
+        boolean asignado = gestorMemoria.asignar(pcb.pid, memoria);
+        if (!asignado) {
+            gestorProcesos.eliminarProceso(pcb.pid);
+            return "No hay memoria suficiente para " + nombre;
         }
-        processManager.enqueueReady(pcb);
-        return "Creado " + name + " (PID " + pcb.pid + "), memoria asignada: " + memory + " KB";
+        gestorProcesos.encolarListo(pcb);
+        return "Creado " + nombre + " (PID " + pcb.pid + "), memoria asignada: " + memoria + " KB";
     }
 
-    public ResultadoTick tick() {
-        StringBuilder result = new StringBuilder();
-        BloqueControlProceso finished = processManager.tick();
-        if (finished != null) {
-            memoryManager.freeByPid(finished.pid);
-            fileSystem.closeAllForPid(finished.pid);
-            processManager.clearFiles(finished.pid);
-            result.append("Proceso PID ").append(finished.pid).append(" terminado, memoria liberada");
+    public ResultadoTick avanzarTick() {
+        StringBuilder resultado = new StringBuilder();
+        BloqueControlProceso finalizado = gestorProcesos.avanzarCiclo();
+        if (finalizado != null) {
+            gestorMemoria.liberarPorPid(finalizado.pid);
+            sistemaArchivos.cerrarTodoPorPid(finalizado.pid);
+            gestorProcesos.limpiarArchivos(finalizado.pid);
+            resultado.append("Proceso PID ").append(finalizado.pid).append(" terminado, memoria liberada");
         } else {
-            result.append("Ciclo ejecutado. En ejecución: ").append(processManager.currentProcess());
+            resultado.append("Ciclo ejecutado. En ejecución: ").append(gestorProcesos.procesoActual());
         }
-        int executedPid = processManager.getLastExecutedPid();
-        String executedName = executedPid == -1 ? "Idle" :
-                Optional.ofNullable(processManager.find(executedPid)).map(p -> p.name).orElse("PID " + executedPid);
-        return new ResultadoTick(result.toString(), executedPid, executedName, executedPid == -1);
+        int pidEjecutado = gestorProcesos.obtenerUltimoPidEjecutado();
+        String nombreEjecutado = pidEjecutado == -1 ? "Inactivo" :
+                Optional.ofNullable(gestorProcesos.buscar(pidEjecutado)).map(p -> p.nombre).orElse("PID " + pidEjecutado);
+        return new ResultadoTick(resultado.toString(), pidEjecutado, nombreEjecutado, pidEjecutado == -1);
     }
 
-    public String requestIO(int pid, String device, String detail) {
-        BloqueControlProceso pcb = processManager.find(pid);
+    public String solicitarES(int pid, String dispositivo, String detalle) {
+        BloqueControlProceso pcb = gestorProcesos.buscar(pid);
         if (pcb == null) {
             return "PID no válido para E/S";
         }
-        if (pcb.state == EstadoProceso.TERMINATED) {
+        if (pcb.estado == EstadoProceso.TERMINADO) {
             return "El proceso ya terminó";
         }
-        if (!processManager.blockForIO(pid)) {
+        if (!gestorProcesos.bloquearPorES(pid)) {
             return "El proceso no está listo/ejecutando";
         }
-        ioManager.request(new SolicitudES(pid, device, detail));
-        return "PID " + pid + " solicita E/S en " + device;
+        gestorES.solicitar(new SolicitudES(pid, dispositivo, detalle));
+        return "PID " + pid + " solicita E/S en " + dispositivo;
     }
 
-    public String completeIO() {
-        SolicitudES req = ioManager.completeNext();
-        if (req == null) {
+    public String completarES() {
+        SolicitudES solicitud = gestorES.completarSiguiente();
+        if (solicitud == null) {
             return "No hay solicitudes de E/S pendientes";
         }
-        processManager.resumeFromIO(req.pid);
-        return "Interrupción de E/S completada para PID " + req.pid + " en " + req.device;
+        gestorProcesos.reanudarPorES(solicitud.pid);
+        return "Interrupción de E/S completada para PID " + solicitud.pid + " en " + solicitud.dispositivo;
     }
 
-    public String createFile(int pid, String name) {
-        if (name.isEmpty()) {
+    public String crearArchivo(int pid, String nombre) {
+        if (nombre.isEmpty()) {
             return "Nombre de archivo vacío";
         }
-        if (!processManager.existsActive(pid)) {
+        if (!gestorProcesos.existeActivo(pid)) {
             return "PID no válido para crear archivo";
         }
-        if (fileSystem.createFile(pid, name)) {
-            return "Archivo " + name + " creado por PID " + pid;
+        if (sistemaArchivos.crearArchivo(pid, nombre)) {
+            return "Archivo " + nombre + " creado por PID " + pid;
         }
         return "El archivo ya existe";
     }
 
-    public String openFile(int pid, String name) {
-        if (!processManager.existsActive(pid)) {
+    public String abrirArchivo(int pid, String nombre) {
+        if (!gestorProcesos.existeActivo(pid)) {
             return "PID no válido para abrir archivo";
         }
-        EstadoApertura status = fileSystem.openFile(pid, name);
-        switch (status) {
-            case SUCCESS:
-                processManager.attachFile(pid, name);
-                return "PID " + pid + " abre " + name;
-            case IN_USE:
-                Integer holder = fileSystem.openedBy(name);
-                return "El archivo ya está abierto por PID " + (holder == null ? "desconocido" : holder);
-            case NOT_FOUND:
+        EstadoApertura estado = sistemaArchivos.abrirArchivo(pid, nombre);
+        switch (estado) {
+            case EXITO:
+                gestorProcesos.asociarArchivo(pid, nombre);
+                return "PID " + pid + " abre " + nombre;
+            case EN_USO:
+                Integer actual = sistemaArchivos.abiertoPor(nombre);
+                return "El archivo ya está abierto por PID " + (actual == null ? "desconocido" : actual);
+            case NO_ENCONTRADO:
             default:
                 return "El archivo no existe";
         }
     }
 
-    public String closeFile(int pid, String name) {
-        EstadoCierre status = fileSystem.closeFile(pid, name);
-        switch (status) {
-            case SUCCESS:
-                processManager.detachFile(pid, name);
-                return "Archivo " + name + " cerrado por PID " + pid;
-            case NOT_OWNER:
+    public String cerrarArchivo(int pid, String nombre) {
+        EstadoCierre estado = sistemaArchivos.cerrarArchivo(pid, nombre);
+        switch (estado) {
+            case EXITO:
+                gestorProcesos.desasociarArchivo(pid, nombre);
+                return "Archivo " + nombre + " cerrado por PID " + pid;
+            case NO_PROPIETARIO:
                 return "El archivo está abierto por otro PID";
-            case NO_OPEN:
+            case SIN_APERTURA:
                 return "El archivo no está abierto";
-            case NOT_FOUND:
+            case NO_ENCONTRADO:
             default:
                 return "El archivo no existe";
         }
     }
 
-    public String forceTerminate(int pid) {
-        BloqueControlProceso pcb = processManager.find(pid);
+    public String forzarTerminacion(int pid) {
+        BloqueControlProceso pcb = gestorProcesos.buscar(pid);
         if (pcb == null) {
             return "PID no encontrado";
         }
-        memoryManager.freeByPid(pid);
-        fileSystem.closeAllForPid(pid);
-        processManager.terminate(pid);
-        processManager.clearFiles(pid);
+        gestorMemoria.liberarPorPid(pid);
+        sistemaArchivos.cerrarTodoPorPid(pid);
+        gestorProcesos.terminar(pid);
+        gestorProcesos.limpiarArchivos(pid);
         return "PID " + pid + " terminado manualmente";
     }
 
-    public List<BloqueControlProceso> getProcesses() { return processManager.getProcesses(); }
-    public List<BloqueMemoria> getMemoryBlocks() { return memoryManager.getBlocks(); }
-    public List<EntradaArchivo> getFiles() { return fileSystem.getFiles(); }
-    public List<SolicitudES> getIoQueue() { return ioManager.getQueue(); }
-    public List<Integer> getSelectablePids() { return processManager.getActivePids(); }
-    public int getTotalMemory() { return memoryManager.getTotalSize(); }
-    public int getUsedMemory() { return memoryManager.getUsedSize(); }
-    public int getFreeMemory() { return memoryManager.getFreeSize(); }
-    public int getQuantum() { return processManager.getQuantum(); }
-    public void setQuantum(int quantum) { processManager.setQuantum(quantum); }
+    public List<BloqueControlProceso> obtenerProcesos() { return gestorProcesos.obtenerProcesos(); }
+    public List<BloqueMemoria> obtenerBloquesMemoria() { return gestorMemoria.obtenerBloques(); }
+    public List<EntradaArchivo> obtenerArchivos() { return sistemaArchivos.obtenerArchivos(); }
+    public List<SolicitudES> obtenerColaES() { return gestorES.obtenerCola(); }
+    public List<Integer> obtenerPidsSeleccionables() { return gestorProcesos.obtenerPidsActivos(); }
+    public int obtenerMemoriaTotal() { return gestorMemoria.obtenerTamanoTotal(); }
+    public int obtenerMemoriaUsada() { return gestorMemoria.obtenerTamanoUsado(); }
+    public int obtenerMemoriaLibre() { return gestorMemoria.obtenerTamanoLibre(); }
+    public int obtenerCuanto() { return gestorProcesos.obtenerCuanto(); }
+    public void configurarCuanto(int cuanto) { gestorProcesos.configurarCuanto(cuanto); }
 
-    public void reset() {
-        processManager.reset();
-        memoryManager.reset();
-        fileSystem.reset();
-        ioManager.reset();
+    public void reiniciar() {
+        gestorProcesos.reiniciar();
+        gestorMemoria.reiniciar();
+        sistemaArchivos.reiniciar();
+        gestorES.reiniciar();
     }
 }

@@ -1,9 +1,9 @@
 import javax.swing.SwingUtilities;
 
-public class App {
+public class Aplicacion {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            KernelUI ui = new KernelUI();
+            InterfazKernel ui = new InterfazKernel();
             ui.setVisible(true);
         });
     }

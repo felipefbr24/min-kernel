@@ -3,25 +3,25 @@ package memoria;
 import java.util.*;
 
 public class GestorMemoria {
-    private final List<MemoryBlock> blocks = new ArrayList<>();
-    private final int totalSize;
+    private final List<BloqueMemoriaInterno> bloques = new ArrayList<>();
+    private final int tamanoTotal;
 
-    public GestorMemoria(int totalSize) {
-        this.totalSize = totalSize;
-        blocks.add(new MemoryBlock(0, totalSize, null));
+    public GestorMemoria(int tamanoTotal) {
+        this.tamanoTotal = tamanoTotal;
+        bloques.add(new BloqueMemoriaInterno(0, tamanoTotal, null));
     }
 
-    public boolean allocate(int pid, int size) {
-        for (int i = 0; i < blocks.size(); i++) {
-            MemoryBlock block = blocks.get(i);
-            if (block.isFree() && block.size >= size) {
-                MemoryBlock used = new MemoryBlock(block.start, size, pid);
-                if (block.size == size) {
-                    blocks.set(i, used);
+    public boolean asignar(int pid, int tamano) {
+        for (int i = 0; i < bloques.size(); i++) {
+            BloqueMemoriaInterno bloque = bloques.get(i);
+            if (bloque.estaLibre() && bloque.tamano >= tamano) {
+                BloqueMemoriaInterno usado = new BloqueMemoriaInterno(bloque.inicio, tamano, pid);
+                if (bloque.tamano == tamano) {
+                    bloques.set(i, usado);
                 } else {
-                    block.start += size;
-                    block.size -= size;
-                    blocks.add(i, used);
+                    bloque.inicio += tamano;
+                    bloque.tamano -= tamano;
+                    bloques.add(i, usado);
                 }
                 return true;
             }
@@ -29,61 +29,61 @@ public class GestorMemoria {
         return false;
     }
 
-    public void freeByPid(int pid) {
-        for (MemoryBlock block : blocks) {
-            if (Objects.equals(block.pid, pid)) {
-                block.pid = null;
+    public void liberarPorPid(int pid) {
+        for (BloqueMemoriaInterno bloque : bloques) {
+            if (Objects.equals(bloque.pid, pid)) {
+                bloque.pid = null;
             }
         }
-        mergeFreeBlocks();
+        fusionarBloquesLibres();
     }
 
-    private void mergeFreeBlocks() {
-        Collections.sort(blocks, Comparator.comparingInt(b -> b.start));
-        for (int i = 0; i < blocks.size() - 1; ) {
-            MemoryBlock current = blocks.get(i);
-            MemoryBlock next = blocks.get(i + 1);
-            if (current.isFree() && next.isFree()) {
-                current.size += next.size;
-                blocks.remove(i + 1);
+    private void fusionarBloquesLibres() {
+        Collections.sort(bloques, Comparator.comparingInt(b -> b.inicio));
+        for (int i = 0; i < bloques.size() - 1; ) {
+            BloqueMemoriaInterno actual = bloques.get(i);
+            BloqueMemoriaInterno siguiente = bloques.get(i + 1);
+            if (actual.estaLibre() && siguiente.estaLibre()) {
+                actual.tamano += siguiente.tamano;
+                bloques.remove(i + 1);
             } else {
                 i++;
             }
         }
-        if (blocks.isEmpty()) {
-            blocks.add(new MemoryBlock(0, totalSize, null));
+        if (bloques.isEmpty()) {
+            bloques.add(new BloqueMemoriaInterno(0, tamanoTotal, null));
         }
     }
 
-    public List<BloqueMemoria> getBlocks() {
-        Collections.sort(blocks, Comparator.comparingInt(b -> b.start));
-        List<BloqueMemoria> list = new ArrayList<>();
-        for (MemoryBlock block : blocks) {
-            list.add(BloqueMemoria.fromBlock(block));
+    public List<BloqueMemoria> obtenerBloques() {
+        Collections.sort(bloques, Comparator.comparingInt(b -> b.inicio));
+        List<BloqueMemoria> lista = new ArrayList<>();
+        for (BloqueMemoriaInterno bloque : bloques) {
+            lista.add(BloqueMemoria.desdeBloque(bloque));
         }
-        return list;
+        return lista;
     }
 
-    public int getTotalSize() {
-        return totalSize;
+    public int obtenerTamanoTotal() {
+        return tamanoTotal;
     }
 
-    public int getUsedSize() {
-        int used = 0;
-        for (MemoryBlock block : blocks) {
-            if (!block.isFree()) {
-                used += block.size;
+    public int obtenerTamanoUsado() {
+        int usado = 0;
+        for (BloqueMemoriaInterno bloque : bloques) {
+            if (!bloque.estaLibre()) {
+                usado += bloque.tamano;
             }
         }
-        return used;
+        return usado;
     }
 
-    public int getFreeSize() {
-        return totalSize - getUsedSize();
+    public int obtenerTamanoLibre() {
+        return tamanoTotal - obtenerTamanoUsado();
     }
 
-    public void reset() {
-        blocks.clear();
-        blocks.add(new MemoryBlock(0, totalSize, null));
+    public void reiniciar() {
+        bloques.clear();
+        bloques.add(new BloqueMemoriaInterno(0, tamanoTotal, null));
     }
 }

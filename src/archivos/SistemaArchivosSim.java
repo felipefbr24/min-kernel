@@ -3,79 +3,79 @@ package archivos;
 import java.util.*;
 
 public class SistemaArchivosSim {
-    private final Map<String, EntradaArchivo> files = new LinkedHashMap<>();
-    private final Map<Integer, Set<String>> openByPid = new HashMap<>();
+    private final Map<String, EntradaArchivo> archivos = new LinkedHashMap<>();
+    private final Map<Integer, Set<String>> abiertosPorPid = new HashMap<>();
 
-    public boolean createFile(int pid, String name) {
-        if (files.containsKey(name)) {
+    public boolean crearArchivo(int pid, String nombre) {
+        if (archivos.containsKey(nombre)) {
             return false;
         }
-        files.put(name, new EntradaArchivo(name, pid));
+        archivos.put(nombre, new EntradaArchivo(nombre, pid));
         return true;
     }
 
-    public EstadoApertura openFile(int pid, String name) {
-        EntradaArchivo entry = files.get(name);
-        if (entry == null) {
-            return EstadoApertura.NOT_FOUND;
+    public EstadoApertura abrirArchivo(int pid, String nombre) {
+        EntradaArchivo entrada = archivos.get(nombre);
+        if (entrada == null) {
+            return EstadoApertura.NO_ENCONTRADO;
         }
-        if (entry.openedByPid != null) {
-            return EstadoApertura.IN_USE;
+        if (entrada.abiertoPorPid != null) {
+            return EstadoApertura.EN_USO;
         }
-        entry.openedByPid = pid;
-        entry.openCount = 1;
-        openByPid.computeIfAbsent(pid, k -> new HashSet<>()).add(name);
-        return EstadoApertura.SUCCESS;
+        entrada.abiertoPorPid = pid;
+        entrada.cantidadAperturas = 1;
+        abiertosPorPid.computeIfAbsent(pid, k -> new HashSet<>()).add(nombre);
+        return EstadoApertura.EXITO;
     }
 
-    public EstadoCierre closeFile(int pid, String name) {
-        EntradaArchivo entry = files.get(name);
-        Set<String> opened = openByPid.get(pid);
-        if (entry == null) {
-            return EstadoCierre.NOT_FOUND;
+    public EstadoCierre cerrarArchivo(int pid, String nombre) {
+        EntradaArchivo entrada = archivos.get(nombre);
+        Set<String> abiertos = abiertosPorPid.get(pid);
+        if (entrada == null) {
+            return EstadoCierre.NO_ENCONTRADO;
         }
-        if (entry.openedByPid == null) {
-            return EstadoCierre.NO_OPEN;
+        if (entrada.abiertoPorPid == null) {
+            return EstadoCierre.SIN_APERTURA;
         }
-        if (!Objects.equals(entry.openedByPid, pid)) {
-            return EstadoCierre.NOT_OWNER;
+        if (!Objects.equals(entrada.abiertoPorPid, pid)) {
+            return EstadoCierre.NO_PROPIETARIO;
         }
-        entry.openCount = 0;
-        entry.openedByPid = null;
-        if (opened != null) {
-            opened.remove(name);
-            if (opened.isEmpty()) {
-                openByPid.remove(pid);
+        entrada.cantidadAperturas = 0;
+        entrada.abiertoPorPid = null;
+        if (abiertos != null) {
+            abiertos.remove(nombre);
+            if (abiertos.isEmpty()) {
+                abiertosPorPid.remove(pid);
             }
         }
-        return EstadoCierre.SUCCESS;
+        return EstadoCierre.EXITO;
     }
 
-    public void closeAllForPid(int pid) {
-        Set<String> opened = openByPid.remove(pid);
-        if (opened == null) {
+    public void cerrarTodoPorPid(int pid) {
+        Set<String> abiertos = abiertosPorPid.remove(pid);
+        if (abiertos == null) {
             return;
         }
-        for (String name : opened) {
-            EntradaArchivo entry = files.get(name);
-            if (entry != null && entry.openCount > 0 && Objects.equals(entry.openedByPid, pid)) {
-                entry.openCount = 0;
-                entry.openedByPid = null;
+        for (String nombre : abiertos) {
+            EntradaArchivo entrada = archivos.get(nombre);
+            if (entrada != null && entrada.cantidadAperturas > 0 && Objects.equals(entrada.abiertoPorPid, pid)) {
+                entrada.cantidadAperturas = 0;
+                entrada.abiertoPorPid = null;
             }
         }
     }
 
-    public List<EntradaArchivo> getFiles() {
-        return new ArrayList<>(files.values());
+    public List<EntradaArchivo> obtenerArchivos() {
+        return new ArrayList<>(archivos.values());
     }
 
-    public void reset() {
-        files.clear();
-        openByPid.clear();
+    public void reiniciar() {
+        archivos.clear();
+        abiertosPorPid.clear();
     }
 
-    public Integer openedBy(String name) {
-        EntradaArchivo entry = files.get(name);
-        return entry == null ? null : entry.openedByPid;
+    public Integer abiertoPor(String nombre) {
+        EntradaArchivo entrada = archivos.get(nombre);
+        return entrada == null ? null : entrada.abiertoPorPid;
     }
 }
