@@ -22,3 +22,4 @@ Objetivo de cada algoritmo:
 - First-Fit: asignación simple y rápida de memoria simulada para visualizar fragmentación y huecos.
 - Cola FIFO de E/S: modelar que las interrupciones se atienden en orden de llegada.
 - Exclusión de archivos: mostrar la restricción de apertura única por archivo y la responsabilidad de cerrar/liberar recursos.
+

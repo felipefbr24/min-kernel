@@ -1,13 +1,13 @@
 package archivos;
 
 public class EntradaArchivo {
-    public final String name;
-    public final int ownerPid;
-    public int openCount = 0;
-    public Integer openedByPid = null;
+    public final String nombre;
+    public final int pidPropietario;
+    public int cantidadAperturas = 0;
+    public Integer abiertoPorPid = null;
 
-    public EntradaArchivo(String name, int ownerPid) {
-        this.name = name;
-        this.ownerPid = ownerPid;
+    public EntradaArchivo(String nombre, int pidPropietario) {
+        this.nombre = nombre;
+        this.pidPropietario = pidPropietario;
     }
 }

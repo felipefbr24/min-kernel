@@ -1,5 +1,5 @@
 package procesos;
 
 public enum EstadoProceso {
-    NEW, READY, RUNNING, WAITING, TERMINATED
+    NUEVO, LISTO, EJECUTANDO, BLOQUEADO, TERMINADO
 }

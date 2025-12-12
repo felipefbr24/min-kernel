@@ -6,21 +6,21 @@ import java.util.Deque;
 import java.util.List;
 
 public class GestorES {
-    private final Deque<SolicitudES> queue = new ArrayDeque<>();
+    private final Deque<SolicitudES> cola = new ArrayDeque<>();
 
-    public void request(SolicitudES request) {
-        queue.add(request);
+    public void solicitar(SolicitudES solicitud) {
+        cola.add(solicitud);
     }
 
-    public SolicitudES completeNext() {
-        return queue.poll();
+    public SolicitudES completarSiguiente() {
+        return cola.poll();
     }
 
-    public List<SolicitudES> getQueue() {
-        return new ArrayList<>(queue);
+    public List<SolicitudES> obtenerCola() {
+        return new ArrayList<>(cola);
     }
 
-    public void reset() {
-        queue.clear();
+    public void reiniciar() {
+        cola.clear();
     }
 }

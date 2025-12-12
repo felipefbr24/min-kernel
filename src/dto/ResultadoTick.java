@@ -1,15 +1,15 @@
 package dto;
 
 public class ResultadoTick {
-    public final String message;
+    public final String mensaje;
     public final int pid;
-    public final String name;
-    public final boolean idle;
+    public final String nombre;
+    public final boolean inactivo;
 
-    public ResultadoTick(String message, int pid, String name, boolean idle) {
-        this.message = message;
+    public ResultadoTick(String mensaje, int pid, String nombre, boolean inactivo) {
+        this.mensaje = mensaje;
         this.pid = pid;
-        this.name = name;
-        this.idle = idle;
+        this.nombre = nombre;
+        this.inactivo = inactivo;
     }
 }

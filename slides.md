@@ -56,7 +56,7 @@
 - Panel visual (`PanelPlan`) pinta barras por PID para ver el historial de ejecución.
 
 ---
-## Diapositiva 8 · Flujo de uso sugerido
+
 1. Ajustar quantum si se desea.
 2. Crear uno o más procesos con ráfaga y memoria requerida.
 3. Ejecutar `tick` manual o activar auto-`tick` para observar Round Robin.
@@ -65,7 +65,7 @@
 6. Terminar procesos o reiniciar para repetir la simulación.
 
 ---
-## Diapositiva 9 · Ideas de extensión
+
 - Añadir prioridad y envejecimiento al planificador.
 - Exponer fallos de asignación de memoria con compactación opcional.
 - Simular buffers de disco o tiempos de servicio variables en E/S.

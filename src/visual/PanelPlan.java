@@ -5,10 +5,10 @@ import java.awt.*;
 import java.util.List;
 
 public class PanelPlan extends JPanel {
-    private final List<EntradaPlan> schedule;
+    private final List<EntradaPlan> planificacion;
 
-    public PanelPlan(List<EntradaPlan> schedule) {
-        this.schedule = schedule;
+    public PanelPlan(List<EntradaPlan> planificacion) {
+        this.planificacion = planificacion;
         setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
     }
 
@@ -23,22 +23,22 @@ public class PanelPlan extends JPanel {
         if (width <= 0 || height <= 0) {
             return;
         }
-        int maxTicks = Math.max(10, Math.min(60, schedule.size()));
-        int start = Math.max(0, schedule.size() - maxTicks);
-        int visible = schedule.size() - start;
+        int maxTicks = Math.max(10, Math.min(60, planificacion.size()));
+        int start = Math.max(0, planificacion.size() - maxTicks);
+        int visible = planificacion.size() - start;
         int barWidth = Math.max(8, width / Math.max(1, visible));
         int x = padding;
         int y = padding + 10;
         g2.drawString("Últimos " + visible + " ciclos", padding, y - 2);
-        for (int i = start; i < schedule.size(); i++) {
-            EntradaPlan entry = schedule.get(i);
-            Color color = getColorForPid(entry.pid);
+        for (int i = start; i < planificacion.size(); i++) {
+            EntradaPlan entrada = planificacion.get(i);
+            Color color = colorParaPid(entrada.pid);
             g2.setColor(color);
             g2.fillRoundRect(x, y, barWidth - 2, height - 20, 8, 8);
             g2.setColor(Color.DARK_GRAY);
             g2.drawRoundRect(x, y, barWidth - 2, height - 20, 8, 8);
             if (barWidth > 40) {
-                String text = entry.label;
+                String text = entrada.etiqueta;
                 FontMetrics fm = g2.getFontMetrics();
                 int tx = x + (barWidth - fm.stringWidth(text)) / 2;
                 int ty = y + (height - 20 + fm.getAscent()) / 2 - 2;
@@ -48,7 +48,7 @@ public class PanelPlan extends JPanel {
         }
     }
 
-    private Color getColorForPid(int pid) {
+    private Color colorParaPid(int pid) {
         if (pid < 0) {
             return new Color(200, 200, 200);
         }

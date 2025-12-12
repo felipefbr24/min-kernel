@@ -1,21 +1,21 @@
 package memoria;
 
 public class BloqueMemoria {
-    public final int start;
-    public final int size;
+    public final int inicio;
+    public final int tamano;
     public final Integer pid;
 
-    public BloqueMemoria(int start, int size, Integer pid) {
-        this.start = start;
-        this.size = size;
+    public BloqueMemoria(int inicio, int tamano, Integer pid) {
+        this.inicio = inicio;
+        this.tamano = tamano;
         this.pid = pid;
     }
 
-    public static BloqueMemoria fromBlock(MemoryBlock block) {
-        return new BloqueMemoria(block.start, block.size, block.pid);
+    public static BloqueMemoria desdeBloque(BloqueMemoriaInterno bloque) {
+        return new BloqueMemoria(bloque.inicio, bloque.tamano, bloque.pid);
     }
 
-    public boolean isFree() {
+    public boolean estaLibre() {
         return pid == null;
     }
 }

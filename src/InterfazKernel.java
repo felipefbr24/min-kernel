@@ -14,32 +14,32 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class KernelUI extends JFrame {
-    private final SimuladorKernel simulator = new SimuladorKernel();
-    private final DefaultTableModel processModel = new DefaultTableModel(new Object[]{"PID", "Nombre", "Estado", "Restante", "Memoria", "Archivos"}, 0);
-    private final DefaultTableModel fileModel = new DefaultTableModel(new Object[]{"Nombre", "Propietario", "Abierto por"}, 0);
-    private final JTextArea memoryArea = new JTextArea();
-    private final JTextArea ioArea = new JTextArea();
-    private final JTextArea logArea = new JTextArea();
-    private final JLabel memorySummary = new JLabel("Memoria");
-    private final JProgressBar memoryBar = new JProgressBar(0, 100);
-    private final List<EntradaPlan> schedule = new ArrayList<>();
-    private final PanelPlan schedulePanel = new PanelPlan(schedule);
+public class InterfazKernel extends JFrame {
+    private final SimuladorKernel simulador = new SimuladorKernel();
+    private final DefaultTableModel modeloProcesos = new DefaultTableModel(new Object[]{"PID", "Nombre", "Estado", "Restante", "Memoria", "Archivos"}, 0);
+    private final DefaultTableModel modeloArchivos = new DefaultTableModel(new Object[]{"Nombre", "Propietario", "Abierto por"}, 0);
+    private final JTextArea areaMemoria = new JTextArea();
+    private final JTextArea areaES = new JTextArea();
+    private final JTextArea areaLog = new JTextArea();
+    private final JLabel resumenMemoria = new JLabel("Memoria");
+    private final JProgressBar barraMemoria = new JProgressBar(0, 100);
+    private final List<EntradaPlan> planificacion = new ArrayList<>();
+    private final PanelPlan panelPlanificacion = new PanelPlan(planificacion);
     private final Color primario = new Color(0x0B3C5D);
     private final Color acento = new Color(0xEE6352);
     private final Color fondo = new Color(0xF5F7FA);
     private final Color panelBlanco = Color.WHITE;
     private final Color texto = new Color(0x1E1E1E);
-    private JTable processTable;
-    private final JSpinner quantumSpinner = new JSpinner(new SpinnerNumberModel(2, 1, 10, 1));
-    private final JSpinner autoDelaySpinner = new JSpinner(new SpinnerNumberModel(700, 100, 5000, 100));
-    private javax.swing.Timer autoTimer;
-    private JButton autoButton;
-    private final JComboBox<Integer> processSelector = new JComboBox<>();
-    private final JComboBox<Integer> fileProcessSelector = new JComboBox<>();
-    private final JComboBox<String> deviceSelector = new JComboBox<>(new String[]{"Teclado", "Disco"});
+    private JTable tablaProcesos;
+    private final JSpinner spinnerCuanto = new JSpinner(new SpinnerNumberModel(2, 1, 10, 1));
+    private final JSpinner spinnerIntervaloAuto = new JSpinner(new SpinnerNumberModel(700, 100, 5000, 100));
+    private javax.swing.Timer temporizadorAuto;
+    private JButton botonAuto;
+    private final JComboBox<Integer> selectorProcesos = new JComboBox<>();
+    private final JComboBox<Integer> selectorProcesosArchivo = new JComboBox<>();
+    private final JComboBox<String> selectorDispositivo = new JComboBox<>(new String[]{"Teclado", "Disco"});
 
-    public KernelUI() {
+    public InterfazKernel() {
         setTitle("Mini Kernel - Simulador de SO");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1100, 750);
@@ -48,13 +48,13 @@ public class KernelUI extends JFrame {
         getContentPane().setBackground(fondo);
         ((JComponent) getContentPane()).setBorder(new EmptyBorder(12, 12, 12, 12));
 
-        add(buildTopPanel(), BorderLayout.NORTH);
-        add(buildTabs(), BorderLayout.CENTER);
-        add(buildLogPanel(), BorderLayout.SOUTH);
-        refreshUI();
+        add(construirPanelSuperior(), BorderLayout.NORTH);
+        add(construirPestanas(), BorderLayout.CENTER);
+        add(construirPanelLog(), BorderLayout.SOUTH);
+        actualizarUI();
     }
 
-    private JPanel buildTopPanel() {
+    private JPanel construirPanelSuperior() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 8)) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -71,51 +71,51 @@ public class KernelUI extends JFrame {
         titulo.setFont(new Font("SansSerif", Font.BOLD, 18));
         panel.add(titulo);
         JButton tickButton = crearBoton("Ciclo CPU", acento, Color.WHITE);
-        tickButton.addActionListener(e -> tickOnce());
+        tickButton.addActionListener(e -> ejecutarCiclo());
         panel.add(tickButton);
-        autoButton = crearBoton("CPU auto", Color.WHITE, primario.darker());
-        autoButton.addActionListener(e -> toggleAuto());
-        panel.add(autoButton);
+        botonAuto = crearBoton("CPU auto", Color.WHITE, primario.darker());
+        botonAuto.addActionListener(e -> alternarAuto());
+        panel.add(botonAuto);
         JButton resetButton = crearBoton("Limpiar todo", Color.WHITE, primario.darker());
         resetButton.addActionListener(e -> {
-            simulator.reset();
-            schedule.clear();
-            stopAuto();
-            logArea.setText("");
-            log("Sistema reiniciado");
-            refreshUI();
+            simulador.reiniciar();
+            planificacion.clear();
+            detenerAuto();
+            areaLog.setText("");
+            registrar("Sistema reiniciado");
+            actualizarUI();
         });
         panel.add(resetButton);
-        quantumSpinner.setValue(simulator.getQuantum());
+        spinnerCuanto.setValue(simulador.obtenerCuanto());
         JButton setQuantum = crearBoton("Actualizar quantum", Color.WHITE, primario.darker());
         setQuantum.addActionListener(e -> {
-            int q = (int) quantumSpinner.getValue();
-            simulator.setQuantum(q);
-            log("Quantum actualizado a " + q);
+            int q = (int) spinnerCuanto.getValue();
+            simulador.configurarCuanto(q);
+            registrar("Quantum actualizado a " + q);
         });
         JLabel quantumLabel = new JLabel("Quantum:");
         quantumLabel.setForeground(Color.WHITE);
         panel.add(quantumLabel);
-        panel.add(quantumSpinner);
+        panel.add(spinnerCuanto);
         panel.add(setQuantum);
         JLabel delayLabel = new JLabel("Intervalo auto (ms):");
         delayLabel.setForeground(Color.WHITE);
         panel.add(delayLabel);
-        panel.add(autoDelaySpinner);
+        panel.add(spinnerIntervaloAuto);
         return panel;
     }
 
-    private JTabbedPane buildTabs() {
+    private JTabbedPane construirPestanas() {
         JTabbedPane tabs = new JTabbedPane();
         tabs.setBackground(fondo);
         tabs.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        tabs.addTab("Procesos", buildProcessPanel());
-        tabs.addTab("Memoria", buildMemoryPanel());
-        tabs.addTab("Archivos y E/S", buildFilesAndIOPanel());
+        tabs.addTab("Procesos", construirPanelProcesos());
+        tabs.addTab("Memoria", construirPanelMemoria());
+        tabs.addTab("Archivos y E/S", construirPanelArchivosES());
         return tabs;
     }
 
-    private JPanel buildProcessPanel() {
+    private JPanel construirPanelProcesos() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
 
         JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -128,9 +128,9 @@ public class KernelUI extends JFrame {
             String name = nameField.getText().trim();
             int burst = (int) burstField.getValue();
             int mem = (int) memField.getValue();
-            String result = simulator.createProcess(name, burst, mem);
-            log(result);
-            refreshUI();
+            String result = simulador.crearProceso(name, burst, mem);
+            registrar(result);
+            actualizarUI();
         });
         form.setBorder(new EmptyBorder(5, 5, 5, 5));
         form.add(new JLabel("Nombre:"));
@@ -141,8 +141,8 @@ public class KernelUI extends JFrame {
         form.add(memField);
         form.add(createButton);
 
-        JTable table = new JTable(processModel);
-        this.processTable = table;
+        JTable table = new JTable(modeloProcesos);
+        this.tablaProcesos = table;
         JScrollPane tableScroll = new JScrollPane(table);
         table.setRowHeight(24);
         table.setGridColor(new Color(230, 230, 230));
@@ -154,10 +154,10 @@ public class KernelUI extends JFrame {
         table.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(0xCED6E0)));
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
-                Integer pid = getSelectedPidFromTable();
+                Integer pid = obtenerPidSeleccionadoTabla();
                 if (pid != null) {
-                    processSelector.setSelectedItem(pid);
-                    fileProcessSelector.setSelectedItem(pid);
+                    selectorProcesos.setSelectedItem(pid);
+                    selectorProcesosArchivo.setSelectedItem(pid);
                 }
             }
         });
@@ -166,38 +166,38 @@ public class KernelUI extends JFrame {
         actions.setBackground(panelBlanco);
         JButton blockIO = crearBoton("Solicitar E/S", primario, Color.WHITE);
         blockIO.addActionListener(e -> {
-            Integer pid = getSelectedPid();
+            Integer pid = obtenerPidSeleccionado();
             if (pid == null) {
-                log("Seleccione un proceso para E/S");
+                registrar("Seleccione un proceso para E/S");
                 return;
             }
-            String result = simulator.requestIO(pid, (String) deviceSelector.getSelectedItem(), "Interacción manual");
-            log(result);
-            refreshUI();
+            String result = simulador.solicitarES(pid, (String) selectorDispositivo.getSelectedItem(), "Interacción manual");
+            registrar(result);
+            actualizarUI();
         });
 
         JButton terminate = crearBoton("Terminar proceso", new Color(244, 67, 54), Color.WHITE);
         terminate.addActionListener(e -> {
-            Integer pid = getSelectedPid();
+            Integer pid = obtenerPidSeleccionado();
             if (pid == null) {
-                log("Seleccione un proceso para terminar");
+                registrar("Seleccione un proceso para terminar");
                 return;
             }
-            String result = simulator.forceTerminate(pid);
-            log(result);
-            refreshUI();
+            String result = simulador.forzarTerminacion(pid);
+            registrar(result);
+            actualizarUI();
         });
         actions.add(new JLabel("Proceso:"));
-        actions.add(processSelector);
+        actions.add(selectorProcesos);
         actions.add(blockIO);
         actions.add(terminate);
 
         JPanel south = new JPanel(new BorderLayout());
         south.setBackground(panelBlanco);
         south.add(actions, BorderLayout.NORTH);
-        schedulePanel.setPreferredSize(new Dimension(200, 140));
-        schedulePanel.setBackground(panelBlanco);
-        south.add(schedulePanel, BorderLayout.CENTER);
+        panelPlanificacion.setPreferredSize(new Dimension(200, 140));
+        panelPlanificacion.setBackground(panelBlanco);
+        south.add(panelPlanificacion, BorderLayout.CENTER);
         panel.add(wrapCard(form), BorderLayout.NORTH);
         panel.add(wrapCard(tableScroll), BorderLayout.CENTER);
         panel.add(wrapCard(south), BorderLayout.SOUTH);
@@ -205,23 +205,23 @@ public class KernelUI extends JFrame {
         return panel;
     }
 
-    private JPanel buildMemoryPanel() {
+    private JPanel construirPanelMemoria() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-        memoryArea.setEditable(false);
-        memoryArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        memoryArea.setBackground(Color.WHITE);
-        memoryBar.setStringPainted(true);
+        areaMemoria.setEditable(false);
+        areaMemoria.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        areaMemoria.setBackground(Color.WHITE);
+        barraMemoria.setStringPainted(true);
         JPanel info = new JPanel(new BorderLayout(5, 5));
         info.setBackground(Color.WHITE);
-        info.add(memorySummary, BorderLayout.WEST);
-        info.add(memoryBar, BorderLayout.CENTER);
-        panel.add(wrapCard(new JScrollPane(memoryArea)), BorderLayout.CENTER);
+        info.add(resumenMemoria, BorderLayout.WEST);
+        info.add(barraMemoria, BorderLayout.CENTER);
+        panel.add(wrapCard(new JScrollPane(areaMemoria)), BorderLayout.CENTER);
         panel.add(wrapCard(info), BorderLayout.NORTH);
         panel.setBackground(fondo);
         return panel;
     }
 
-    private JPanel buildFilesAndIOPanel() {
+    private JPanel construirPanelArchivosES() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
 
         JPanel filePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -229,46 +229,46 @@ public class KernelUI extends JFrame {
         JTextField fileNameField = new JTextField("archivo.txt", 12);
         JButton createFile = crearBoton("Crear", primario, Color.WHITE);
         createFile.addActionListener(e -> {
-            Integer pid = (Integer) fileProcessSelector.getSelectedItem();
+            Integer pid = (Integer) selectorProcesosArchivo.getSelectedItem();
             if (pid == null) {
-                log("Seleccione un proceso propietario");
+                registrar("Seleccione un proceso propietario");
                 return;
             }
-            String result = simulator.createFile(pid, fileNameField.getText().trim());
-            log(result);
-            refreshUI();
+            String result = simulador.crearArchivo(pid, fileNameField.getText().trim());
+            registrar(result);
+            actualizarUI();
         });
         JButton openFile = crearBoton("Abrir", primario, Color.WHITE);
         openFile.addActionListener(e -> {
-            Integer pid = (Integer) fileProcessSelector.getSelectedItem();
+            Integer pid = (Integer) selectorProcesosArchivo.getSelectedItem();
             if (pid == null) {
-                log("Seleccione un proceso para abrir archivo");
+                registrar("Seleccione un proceso para abrir archivo");
                 return;
             }
-            String result = simulator.openFile(pid, fileNameField.getText().trim());
-            log(result);
-            refreshUI();
+            String result = simulador.abrirArchivo(pid, fileNameField.getText().trim());
+            registrar(result);
+            actualizarUI();
         });
         JButton closeFile = crearBoton("Cerrar", new Color(244, 67, 54), Color.WHITE);
         closeFile.addActionListener(e -> {
-            Integer pid = (Integer) fileProcessSelector.getSelectedItem();
+            Integer pid = (Integer) selectorProcesosArchivo.getSelectedItem();
             if (pid == null) {
-                log("Seleccione un proceso para cerrar archivo");
+                registrar("Seleccione un proceso para cerrar archivo");
                 return;
             }
-            String result = simulator.closeFile(pid, fileNameField.getText().trim());
-            log(result);
-            refreshUI();
+            String result = simulador.cerrarArchivo(pid, fileNameField.getText().trim());
+            registrar(result);
+            actualizarUI();
         });
         filePanel.add(new JLabel("Proceso:"));
-        filePanel.add(fileProcessSelector);
+        filePanel.add(selectorProcesosArchivo);
         filePanel.add(new JLabel("Archivo:"));
         filePanel.add(fileNameField);
         filePanel.add(createFile);
         filePanel.add(openFile);
         filePanel.add(closeFile);
 
-        JTable fileTable = new JTable(fileModel);
+        JTable fileTable = new JTable(modeloArchivos);
         JScrollPane fileScroll = new JScrollPane(fileTable);
 
         JPanel ioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -276,38 +276,38 @@ public class KernelUI extends JFrame {
         JTextField ioDetail = new JTextField("Leer entrada", 12);
         JButton requestIO = crearBoton("Solicitar", primario, Color.WHITE);
         requestIO.addActionListener(e -> {
-            Integer pid = (Integer) processSelector.getSelectedItem();
+            Integer pid = (Integer) selectorProcesos.getSelectedItem();
             if (pid == null) {
-                log("Seleccione un proceso para E/S");
+                registrar("Seleccione un proceso para E/S");
                 return;
             }
-            String result = simulator.requestIO(pid, (String) deviceSelector.getSelectedItem(), ioDetail.getText().trim());
-            log(result);
-            refreshUI();
+            String result = simulador.solicitarES(pid, (String) selectorDispositivo.getSelectedItem(), ioDetail.getText().trim());
+            registrar(result);
+            actualizarUI();
         });
         JButton completeIO = crearBoton("Completar siguiente interrupción", acento, Color.WHITE);
         completeIO.addActionListener(e -> {
-            String result = simulator.completeIO();
-            log(result);
-            refreshUI();
+            String result = simulador.completarES();
+            registrar(result);
+            actualizarUI();
         });
         ioPanel.add(new JLabel("Proceso:"));
-        ioPanel.add(processSelector);
+        ioPanel.add(selectorProcesos);
         ioPanel.add(new JLabel("Dispositivo:"));
-        ioPanel.add(deviceSelector);
+        ioPanel.add(selectorDispositivo);
         ioPanel.add(new JLabel("Detalle:"));
         ioPanel.add(ioDetail);
         ioPanel.add(requestIO);
         ioPanel.add(completeIO);
 
-        ioArea.setEditable(false);
-        ioArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        ioArea.setBackground(Color.WHITE);
+        areaES.setEditable(false);
+        areaES.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        areaES.setBackground(Color.WHITE);
 
         JPanel center = new JPanel(new GridLayout(1, 2, 10, 10));
         center.setBackground(fondo);
         center.add(wrapCard(fileScroll));
-        center.add(wrapCard(new JScrollPane(ioArea)));
+        center.add(wrapCard(new JScrollPane(areaES)));
 
         panel.add(wrapCard(filePanel), BorderLayout.NORTH);
         panel.add(center, BorderLayout.CENTER);
@@ -316,13 +316,13 @@ public class KernelUI extends JFrame {
         return panel;
     }
 
-    private JScrollPane buildLogPanel() {
-        logArea.setEditable(false);
-        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        logArea.setBackground(Color.WHITE);
-        logArea.setLineWrap(true);
-        logArea.setWrapStyleWord(true);
-        JScrollPane scroll = new JScrollPane(logArea);
+    private JScrollPane construirPanelLog() {
+        areaLog.setEditable(false);
+        areaLog.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        areaLog.setBackground(Color.WHITE);
+        areaLog.setLineWrap(true);
+        areaLog.setWrapStyleWord(true);
+        JScrollPane scroll = new JScrollPane(areaLog);
         scroll.setPreferredSize(new Dimension(200, 120));
         scroll.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 1, 1, 1, new Color(0xE0E6ED)),
@@ -331,128 +331,128 @@ public class KernelUI extends JFrame {
         return scroll;
     }
 
-    private void refreshUI() {
-        refreshProcessTable();
-        refreshMemory();
-        refreshFiles();
-        refreshSelectors();
-        refreshIOQueue();
+    private void actualizarUI() {
+        actualizarTablaProcesos();
+        actualizarMemoria();
+        actualizarArchivos();
+        actualizarSelectores();
+        actualizarColaES();
     }
 
-    private void refreshProcessTable() {
-        processModel.setRowCount(0);
-        for (BloqueControlProceso pcb : simulator.getProcesses()) {
-            processModel.addRow(new Object[]{
+    private void actualizarTablaProcesos() {
+        modeloProcesos.setRowCount(0);
+        for (BloqueControlProceso pcb : simulador.obtenerProcesos()) {
+            modeloProcesos.addRow(new Object[]{
                     pcb.pid,
-                    pcb.name,
-                    pcb.state,
-                    pcb.remainingTime,
-                    pcb.memoryNeeded,
-                    pcb.openFiles.size()
+                    pcb.nombre,
+                    pcb.estado,
+                    pcb.tiempoRestante,
+                    pcb.memoriaNecesaria,
+                    pcb.archivosAbiertos.size()
             });
         }
     }
 
-    private void refreshMemory() {
-        int total = simulator.getTotalMemory();
-        int used = simulator.getUsedMemory();
-        int free = simulator.getFreeMemory();
-        int percent = total == 0 ? 0 : (int) Math.round((used * 100.0) / total);
-        memorySummary.setText("Total: " + total + " KB | Usada: " + used + " KB | Libre: " + free + " KB");
-        memoryBar.setValue(percent);
-        memoryBar.setString(percent + "%");
+    private void actualizarMemoria() {
+        int total = simulador.obtenerMemoriaTotal();
+        int usada = simulador.obtenerMemoriaUsada();
+        int libre = simulador.obtenerMemoriaLibre();
+        int porcentaje = total == 0 ? 0 : (int) Math.round((usada * 100.0) / total);
+        resumenMemoria.setText("Total: " + total + " KB | Usada: " + usada + " KB | Libre: " + libre + " KB");
+        barraMemoria.setValue(porcentaje);
+        barraMemoria.setString(porcentaje + "%");
         StringBuilder builder = new StringBuilder();
-        for (BloqueMemoria block : simulator.getMemoryBlocks()) {
+        for (BloqueMemoria bloque : simulador.obtenerBloquesMemoria()) {
             builder.append(String.format("%03d-%03d | %4d | %s%n",
-                    block.start,
-                    block.start + block.size - 1,
-                    block.size,
-                    block.isFree() ? "Libre" : "PID " + block.pid));
+                    bloque.inicio,
+                    bloque.inicio + bloque.tamano - 1,
+                    bloque.tamano,
+                    bloque.estaLibre() ? "Libre" : "PID " + bloque.pid));
         }
-        memoryArea.setText(builder.toString());
+        areaMemoria.setText(builder.toString());
     }
 
-    private void refreshFiles() {
-        fileModel.setRowCount(0);
-        for (EntradaArchivo file : simulator.getFiles()) {
-            fileModel.addRow(new Object[]{file.name, file.ownerPid, file.openCount});
+    private void actualizarArchivos() {
+        modeloArchivos.setRowCount(0);
+        for (EntradaArchivo archivo : simulador.obtenerArchivos()) {
+            modeloArchivos.addRow(new Object[]{archivo.nombre, archivo.pidPropietario, archivo.abiertoPorPid});
         }
     }
 
-    private void refreshIOQueue() {
+    private void actualizarColaES() {
         StringBuilder builder = new StringBuilder();
         builder.append("Cola de solicitudes de E/S:\n");
-        for (SolicitudES req : simulator.getIoQueue()) {
-            builder.append(String.format("PID %d -> %s (%s)%n", req.pid, req.device, req.detail));
+        for (SolicitudES solicitud : simulador.obtenerColaES()) {
+            builder.append(String.format("PID %d -> %s (%s)%n", solicitud.pid, solicitud.dispositivo, solicitud.detalle));
         }
-        ioArea.setText(builder.toString());
+        areaES.setText(builder.toString());
     }
 
-    private void refreshSelectors() {
-        List<Integer> pids = simulator.getSelectablePids();
-        processSelector.removeAllItems();
-        fileProcessSelector.removeAllItems();
+    private void actualizarSelectores() {
+        List<Integer> pids = simulador.obtenerPidsSeleccionables();
+        selectorProcesos.removeAllItems();
+        selectorProcesosArchivo.removeAllItems();
         for (Integer pid : pids) {
-            processSelector.addItem(pid);
-            fileProcessSelector.addItem(pid);
+            selectorProcesos.addItem(pid);
+            selectorProcesosArchivo.addItem(pid);
         }
     }
 
-    private void log(String message) {
-        String time = LocalTime.now().withNano(0).toString();
-        logArea.append("[" + time + "] " + message + "\n");
-        logArea.setCaretPosition(logArea.getDocument().getLength());
+    private void registrar(String mensaje) {
+        String hora = LocalTime.now().withNano(0).toString();
+        areaLog.append("[" + hora + "] " + mensaje + "\n");
+        areaLog.setCaretPosition(areaLog.getDocument().getLength());
     }
 
-    private void tickOnce() {
-        ResultadoTick result = simulator.tick();
-        log(result.message);
-        schedule.add(new EntradaPlan(result.pid, result.name));
-        if (schedule.size() > 60) {
-            schedule.remove(0);
+    private void ejecutarCiclo() {
+        ResultadoTick resultado = simulador.avanzarTick();
+        registrar(resultado.mensaje);
+        planificacion.add(new EntradaPlan(resultado.pid, resultado.nombre));
+        if (planificacion.size() > 60) {
+            planificacion.remove(0);
         }
-        schedulePanel.repaint();
-        refreshUI();
+        panelPlanificacion.repaint();
+        actualizarUI();
     }
 
-    private void toggleAuto() {
-        if (autoTimer != null && autoTimer.isRunning()) {
-            stopAuto();
+    private void alternarAuto() {
+        if (temporizadorAuto != null && temporizadorAuto.isRunning()) {
+            detenerAuto();
             return;
         }
-        int delay = (int) autoDelaySpinner.getValue();
-        autoTimer = new javax.swing.Timer(delay, e -> tickOnce());
-        autoTimer.start();
-        autoButton.setText("Detener auto");
+        int delay = (int) spinnerIntervaloAuto.getValue();
+        temporizadorAuto = new javax.swing.Timer(delay, e -> ejecutarCiclo());
+        temporizadorAuto.start();
+        botonAuto.setText("Detener auto");
     }
 
-    private void stopAuto() {
-        if (autoTimer != null) {
-            autoTimer.stop();
-            autoTimer = null;
+    private void detenerAuto() {
+        if (temporizadorAuto != null) {
+            temporizadorAuto.stop();
+            temporizadorAuto = null;
         }
-        if (autoButton != null) {
-            autoButton.setText("CPU auto");
+        if (botonAuto != null) {
+            botonAuto.setText("CPU auto");
         }
     }
 
-    private Integer getSelectedPid() {
-        Integer comboPid = (Integer) processSelector.getSelectedItem();
+    private Integer obtenerPidSeleccionado() {
+        Integer comboPid = (Integer) selectorProcesos.getSelectedItem();
         if (comboPid != null) {
             return comboPid;
         }
-        return getSelectedPidFromTable();
+        return obtenerPidSeleccionadoTabla();
     }
 
-    private Integer getSelectedPidFromTable() {
-        if (processTable == null) {
+    private Integer obtenerPidSeleccionadoTabla() {
+        if (tablaProcesos == null) {
             return null;
         }
-        int row = processTable.getSelectedRow();
+        int row = tablaProcesos.getSelectedRow();
         if (row < 0) {
             return null;
         }
-        Object value = processModel.getValueAt(row, 0);
+        Object value = modeloProcesos.getValueAt(row, 0);
         if (value instanceof Integer) {
             return (Integer) value;
         }
