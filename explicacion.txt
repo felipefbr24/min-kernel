@@ -1,0 +1,24 @@
+Simulador Mini Kernel (Java/Swing)
+-----------------------------------
+
+Módulos principales (clases en src/):
+- App y KernelUI: interfaz gráfica Swing. Orquesta los paneles de procesos, memoria, archivos/E/S y la bitácora. Se apoya en el simulador para toda la lógica.
+- SimuladorKernel: fachada del núcleo. Expone crear/terminar procesos, ciclo de CPU, E/S y archivos; delega a gestores internos.
+- GestorProcesos: gestiona PCBs (BloqueControlProceso), cola de listos y proceso en ejecución. Algoritmo de planificación: Round-Robin con quantum configurable; cada tick descuenta ráfaga y rota cuando se agota el quantum o termina el proceso. Estados: NEW, READY, RUNNING, WAITING, TERMINATED.
+- GestorMemoria: simula memoria principal con First-Fit. Mantiene bloques (BloqueMemoria) y asigna el primer hueco libre suficiente; fragmenta si sobra y fusiona libres al liberar.
+- SistemaArchivosSim: administra archivos simulados (EntradaArchivo). Permite crear, abrir/cerrar con exclusión mutua (un solo PID a la vez). Guarda propietario y quién lo tiene abierto.
+- GestorES: cola FIFO de solicitudes de E/S (SolicitudES). Al completar, el proceso vuelve a READY.
+- PlanificadorVisual (PanelPlan/EntradaPlan): mini cronograma del Round-Robin para los últimos ciclos.
+- ResultadoTick: DTO con el mensaje y PID ejecutado en cada ciclo.
+
+Flujos clave:
+- Ciclo CPU (botón/auto): SimuladorKernel.tick -> GestorProcesos.tick (Round-Robin). Si termina un proceso, libera memoria, cierra archivos y limpia PCBs.
+- E/S: requestIO bloquea el proceso (WAITING) y encola SolicitudES en GestorES. completeIO toma la siguiente solicitud FIFO y reencola el proceso en READY.
+- Memoria: createProcess solicita asignación por First-Fit; si falla, se descarta el proceso. Al terminar/liberar, GestorMemoria fusiona huecos libres.
+- Archivos: createFile registra FCB; openFile verifica que no esté en uso y asigna openedByPid; closeFile valida propietario y libera la apertura. Al terminar un proceso se cierran sus archivos abiertos.
+
+Objetivo de cada algoritmo:
+- Round-Robin: repartir CPU equitativamente entre procesos listos con un quantum fijo.
+- First-Fit: asignación simple y rápida de memoria simulada para visualizar fragmentación y huecos.
+- Cola FIFO de E/S: modelar que las interrupciones se atienden en orden de llegada.
+- Exclusión de archivos: mostrar la restricción de apertura única por archivo y la responsabilidad de cerrar/liberar recursos.

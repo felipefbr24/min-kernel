@@ -1,0 +1,55 @@
+1. Presentación
+- El proyecto implementa un mini-kernel pedagógico en Java (Swing) para mostrar, de forma visual e interactiva, cómo un sistema operativo gestiona procesos, memoria, archivos y E/S. La elección de Swing permite un entorno portable sin dependencias externas, mientras que la separación en módulos facilita la lectura y la evaluación por rúbrica.
+
+2. Marco de conceptos
+- Planificación Round-Robin: cada proceso recibe un quantum fijo; al agotarse pasa al final de la cola READY. Esto ilustra equidad y evita inanición.
+- PCB (Bloque de Control de Proceso): encapsula PID, ráfaga restante, memoria requerida y estado (NEW/READY/RUNNING/WAITING/TERMINATED). Es la base para transiciones de estado.
+- Gestión de memoria contigua: se usa First-Fit para asignar el primer hueco libre suficientemente grande; tras liberar se fusionan huecos contiguos para reducir fragmentación externa.
+- Archivos simulados: apertura exclusiva (un solo PID puede abrirlo), estados de apertura/cierre, propiedad del archivo y conteo de aperturas.
+- E/S: cola FIFO de solicitudes, bloqueo del proceso (WAITING) y reanudación al completar la interrupción.
+- Interfaz gráfica: tablas y panel de historial permiten validar visualmente el comportamiento de los algoritmos.
+
+3. Requerimientos del problema
+- Simular el ciclo de vida de procesos (creación, ejecución, bloqueo por E/S, terminación).
+- Visualizar la rotación de CPU bajo Round-Robin y permitir modificar el quantum.
+- Mostrar el uso de memoria y los bloques libres/ocupados.
+- Gestionar archivos simulados (crear, abrir, cerrar) con restricciones de uso exclusivo.
+- Administrar solicitudes de E/S y su cola de interrupciones.
+- Proveer modo automático de ciclos de CPU y controles manuales para pruebas.
+
+4. Requisitos de la solución - Ingeniería de detalle
+- Estructura modular: procesos/, memoria/, archivos/, es/, visual/, dto/ y un orquestador (SimuladorKernel).
+- Algoritmo First-Fit para asignación; liberación con fusión de huecos contiguos para minimizar fragmentación.
+- Política de apertura exclusiva: si un archivo está abierto por un PID, otro PID recibe error IN_USE.
+- Transiciones de estado claras: RUNNING/READY -> WAITING (E/S) -> READY; RUNNING -> TERMINATED al consumir ráfaga.
+- UI debe reflejar el estado tras cada tick: tablas actualizadas, barra de memoria, cola de E/S y log cronológico.
+
+5. Modelo de la solución
+- Procesos: GestorProcesos mantiene cola READY y proceso RUNNING; BloqueControlProceso y EstadoProceso modelan el PCB y sus estados.
+- Memoria: GestorMemoria gestiona MemoryBlock/BloqueMemoria con First-Fit; calcula usado/libre y fusiona huecos.
+- Archivos: SistemaArchivosSim, EntradaArchivo y enums de estado controlan propiedad y apertura exclusiva.
+- E/S: GestorES y SolicitudES gestionan la cola FIFO de interrupciones.
+- Integración: SimuladorKernel coordina todos los gestores y expone operaciones a la UI; ResultadoTick encapsula el resultado de cada ciclo; PanelPlan/EntradaPlan dibujan el historial RR; KernelUI es la capa de interacción.
+
+6. Validación del modelo
+- Pruebas manuales en la UI: creación de procesos con distintas ráfagas/memoria, avance de ciclos observando rotación RR, liberación de memoria al terminar, bloqueo y reanudación tras completar E/S, rechazo de aperturas duplicadas, cierre correcto y limpieza al terminar proceso, ajuste de quantum y ejecución automática.
+- Validación visual: consistencia entre log cronológico, tablas, barra de memoria y panel de historial; ausencia de PIDs terminados en listas de selección.
+
+7. Implementación
+- Java 8+ con Swing. Código organizado en: procesos/, memoria/, archivos/, es/, visual/, dto/, más App (entrada) y SimuladorKernel (orquestador).
+- Sin dependencias externas; uso de colecciones estándar y Swing para la vista.
+- Estilo UI modernizado con colores, tarjetas y botones personalizados para facilitar lectura en la demostración.
+
+8. Despliegue
+- Compilación: javac -d bin $(find src -name '*.java')
+- Ejecución: java -cp bin App
+- No requiere instalación adicional; todo el código es local y portable.
+
+9. Conclusiones y recomendaciones
+- El simulador cumple el objetivo pedagógico: muestra de manera clara la planificación RR, la gestión contigua de memoria y el bloqueo por E/S, con una UI que evidencia cada transición.
+- Recomendaciones: añadir métricas (tiempos de espera/retorno), compactación periódica para fragmentación, soporte de múltiples aperturas con conteo (lectores), pruebas automatizadas de regresión y persistencia opcional de escenarios.
+
+10. Referencias bibliográficas
+- Silberschatz, A., Galvin, P., Gagne, G. Operating System Concepts.
+- Tanenbaum, A. Modern Operating Systems.
+- Documentación oficial de Java (Swing, Collections).

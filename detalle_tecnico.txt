@@ -1,0 +1,34 @@
+Gestión de procesos
+- Creación: KernelUI toma nombre/ráfaga/memoria desde la UI y llama a SimuladorKernel.createProcess. Internamente, GestorProcesos crea un BloqueControlProceso (PCB) con estado NEW, ráfaga restante y memoria requerida; GestorMemoria intenta asignar memoria (First-Fit). Si hay éxito, el proceso entra a la cola READY.
+- Ciclos de CPU (tick): GestorProcesos aplica Round-Robin: despacha el siguiente READY, decrementa remainingTime y el timeSlice (quantum). Si la ráfaga termina pasa a TERMINATED (libera memoria y archivos). Si se acaba el quantum pasa de RUNNING a READY y rota. El último PID ejecutado se usa para dibujar el historial.
+- Estados: EstadoProceso (NEW, READY, RUNNING, WAITING, TERMINATED) controlan las transiciones en bloqueos y terminaciones.
+
+Gestión de E/S (entradas y salidas)
+- Solicitud: KernelUI selecciona PID y dispositivo; llama a SimuladorKernel.requestIO. GestorProcesos mueve el proceso a WAITING y GestorES encola una SolicitudES (cola FIFO).
+- Completar: SimuladorKernel.completeIO saca la siguiente SolicitudES de la cola y reingresa el PID a READY. La UI muestra la cola actual en el panel de E/S.
+
+Requerimientos de la guía y su implementación
+- Planificación RR: Implementado en GestorProcesos.tick con quantum configurable desde la UI.
+- Visualizar CPU: PanelPlan/EntradaPlan dibuja el historial; la tabla de procesos muestra estado y tiempo restante.
+- Memoria contigua: GestorMemoria con First-Fit; BloqueMemoria expone segmentos y la barra de progreso muestra uso.
+- Archivos: SistemaArchivosSim crea/abre/cierra archivos. Apertura exclusiva: EstadoApertura/EstadoCierre devuelven errores si ya está abierto por otro PID.
+- E/S: GestorES mantiene cola FIFO; UI permite solicitar y completar interrupciones.
+- Controles de usuario: KernelUI incluye creación de procesos, solicitar E/S, terminar proceso, crear/abrir/cerrar archivo, ajustar quantum, modo auto CPU.
+
+Clases y responsabilidades
+- App: punto de entrada; crea la UI.
+- KernelUI: capa de presentación; orquesta eventos de la interfaz, llama a SimuladorKernel y refresca tablas, memoria, archivos y log.
+- SimuladorKernel: fachada/orquestador; coordina procesos, memoria, archivos y E/S; devuelve ResultadoTick para cada ciclo.
+- procesos/GestorProcesos: cola READY, proceso RUNNING, quantum y rotación RR.
+- procesos/BloqueControlProceso, procesos/EstadoProceso: modelo del PCB y sus estados.
+- memoria/GestorMemoria, memoria/BloqueMemoria, memoria/MemoryBlock: asignación contigua First-Fit y fusión de huecos al liberar.
+- archivos/SistemaArchivosSim, archivos/EntradaArchivo, archivos/EstadoApertura, archivos/EstadoCierre: CRUD simulado de archivos y control de apertura exclusiva.
+- es/GestorES, es/SolicitudES: cola FIFO de solicitudes de E/S.
+- visual/PanelPlan, visual/EntradaPlan: renderiza el historial Round-Robin.
+- dto/ResultadoTick: encapsula resultado de un ciclo (mensaje, PID, nombre, idle).
+
+Algoritmos y propósito
+- Round-Robin: repartir CPU equitativamente con quantum fijo, evita inanición y muestra rotación en PanelPlan.
+- First-Fit (memoria contigua): asigna el primer hueco libre suficiente; simple y eficiente para un simulador; fusión de huecos minimiza fragmentación externa.
+- Cola FIFO para E/S: modela orden de llegada de interrupciones; reingresa procesos a READY en el mismo orden solicitado.
+- Apertura exclusiva de archivo: un PID a la vez; evita inconsistencias y muestra bloqueo lógico cuando otro proceso intenta abrirlo.

@@ -1,0 +1,11 @@
+import archivos.EntradaArchivo;
+import archivos.EstadoApertura;
+import archivos.EstadoCierre;
+import archivos.SistemaArchivosSim;
+import dto.ResultadoTick;
+import es.SolicitudES;
+import visual.EntradaPlan;
+import visual.PanelPlan;
+import procesos.BloqueControlProceso;
+import memoria.BloqueMemoria;
+
